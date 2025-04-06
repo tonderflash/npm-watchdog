@@ -1,10 +1,20 @@
 # npm-watchdog 🐕
 
-A command-line tool to detect unused dependencies in JavaScript/TypeScript projects.
+A cross-platform command-line tool to detect unused dependencies in JavaScript/TypeScript projects.
 
 ## Description
 
 npm-watchdog analyzes your project's source files (.js, .jsx, .ts, .tsx) and detects which packages listed in your package.json are not being used in the source code. It's like having a watchdog guarding your forgotten dependencies.
+
+## Cross-Platform Compatibility
+
+npm-watchdog works on all major platforms:
+
+- Windows
+- macOS
+- Linux
+
+The tool is designed to handle path differences, file system operations, and other platform-specific issues automatically.
 
 ## Installation
 
@@ -74,9 +84,14 @@ npm-watchdog:
    - `require('module')`
    - `import xyz from 'module'`
    - `import * as xyz from 'module'`
+   - `import * as xyz from 'module'`
    - `import 'module'`
 4. Compares the dependencies found with those listed in package.json
 5. Reports packages that are not being used in any file
+
+## Requirements
+
+- Node.js 12 or higher
 
 ## Limitations
 

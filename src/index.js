@@ -92,6 +92,11 @@ const t = translations[lang];
 // Actualizar la descripción del programa según el idioma
 program.description(t.description);
 
+// Normalizar patrones para compatibilidad entre plataformas
+function normalizePath(p) {
+  return p.split(/[\/\\]/).join(path.sep);
+}
+
 // Función principal
 async function main() {
   const rootPath = path.resolve(options.root);
@@ -122,10 +127,19 @@ async function main() {
   }
 
   // Encontrar archivos .js, .jsx, .ts, .tsx
-  const sourceFiles = globSync("**/*.{js,jsx,ts,tsx}", {
+  // Configuración del glob para compatibilidad multiplataforma
+  const ignorePatterns = [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+  ].map(normalizePath);
+  const sourcePattern = normalizePath("**/*.{js,jsx,ts,tsx}");
+
+  const sourceFiles = globSync(sourcePattern, {
     cwd: rootPath,
-    ignore: ["**/node_modules/**", "**/dist/**", "**/build/**"],
+    ignore: ignorePatterns,
     absolute: true,
+    windowsPathsNoEscape: true, // Importante para Windows
   });
 
   if (sourceFiles.length === 0) {
@@ -137,22 +151,29 @@ async function main() {
   const usedDependencies = new Set();
 
   for (const file of sourceFiles) {
-    const content = fs.readFileSync(file, "utf8");
+    try {
+      const content = fs.readFileSync(file, "utf8");
 
-    // Buscar diferentes patrones de importación
-    const patterns = [
-      /require\(['"]([^./][^'"]*)['"]\)/g, // require('module')
-      /import\s+.*\s+from\s+['"]([^./][^'"]*)['"]/g, // import xyz from 'module'
-      /import\s+\*\s+as\s+.*\s+from\s+['"]([^./][^'"]*)['"]/g, // import * as xyz from 'module'
-      /import\s+['"]([^./][^'"]*)['"]/g, // import 'module'
-    ];
+      // Buscar diferentes patrones de importación
+      const patterns = [
+        /require\(['"]([^./][^'"]*)['"]\)/g, // require('module')
+        /import\s+.*\s+from\s+['"]([^./][^'"]*)['"]/g, // import xyz from 'module'
+        /import\s+\*\s+as\s+.*\s+from\s+['"]([^./][^'"]*)['"]/g, // import * as xyz from 'module'
+        /import\s+['"]([^./][^'"]*)['"]/g, // import 'module'
+      ];
 
-    for (const pattern of patterns) {
-      let match;
-      while ((match = pattern.exec(content)) !== null) {
-        const packageName = getPackageNameFromImport(match[1]);
-        usedDependencies.add(packageName);
+      for (const pattern of patterns) {
+        let match;
+        while ((match = pattern.exec(content)) !== null) {
+          const packageName = getPackageNameFromImport(match[1]);
+          usedDependencies.add(packageName);
+        }
       }
+    } catch (error) {
+      // Manejar errores de lectura de archivos silenciosamente para mayor robustez
+      console.error(
+        chalk.yellow(`Warning: Could not read file ${file}: ${error.message}`)
+      );
     }
   }
 

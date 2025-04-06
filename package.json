@@ -1,10 +1,13 @@
 {
   "name": "npm-watchdog",
-  "version": "1.0.0",
-  "description": "Una herramienta CLI para detectar dependencias no utilizadas en proyectos JavaScript/TypeScript",
+  "version": "1.0.1",
+  "description": "A cross-platform tool to detect unused dependencies in JavaScript/TypeScript projects",
   "main": "src/index.js",
   "bin": {
     "npm-watchdog": "./src/index.js"
+  },
+  "engines": {
+    "node": ">=12.0.0"
   },
   "scripts": {
     "start": "node src/index.js"
@@ -15,7 +18,11 @@
     "cli",
     "unused",
     "detector",
-    "watchdog"
+    "watchdog",
+    "cross-platform",
+    "windows",
+    "linux",
+    "macos"
   ],
   "author": "",
   "license": "MIT",
@@ -23,5 +30,18 @@
     "chalk": "^4.1.2",
     "commander": "^11.0.0",
     "glob": "^10.3.3"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tonderflash/npm-watchdog.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tonderflash/npm-watchdog/issues"
+  },
+  "homepage": "https://github.com/tonderflash/npm-watchdog#readme",
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ]
 }
