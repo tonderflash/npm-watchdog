@@ -1,0 +1,27 @@
+{
+  "name": "npm-watchdog",
+  "version": "1.0.0",
+  "description": "Una herramienta CLI para detectar dependencias no utilizadas en proyectos JavaScript/TypeScript",
+  "main": "src/index.js",
+  "bin": {
+    "npm-watchdog": "./src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "keywords": [
+    "npm",
+    "dependencies",
+    "cli",
+    "unused",
+    "detector",
+    "watchdog"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "commander": "^11.0.0",
+    "glob": "^10.3.3"
+  }
+}
