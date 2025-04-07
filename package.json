@@ -1,6 +1,6 @@
 {
   "name": "npm-watchdog",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A cross-platform tool to detect unused dependencies in JavaScript/TypeScript projects",
   "main": "src/index.js",
   "bin": {
@@ -29,7 +29,13 @@
   "dependencies": {
     "chalk": "^4.1.2",
     "commander": "^11.0.0",
-    "glob": "^10.3.3"
+    "glob": "^10.3.3",
+    "figlet": "^1.6.0",
+    "gradient-string": "^2.0.2",
+    "boxen": "^5.1.2",
+    "cli-spinners": "^2.9.0",
+    "ora": "^5.4.1",
+    "cli-table3": "^0.6.3"
   },
   "repository": {
     "type": "git",

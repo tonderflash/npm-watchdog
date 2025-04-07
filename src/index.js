@@ -5,6 +5,64 @@ const path = require("path");
 const { program } = require("commander");
 const chalk = require("chalk");
 const { globSync } = require("glob");
+const figlet = require("figlet");
+const gradient = require("gradient-string");
+const boxen = require("boxen");
+const ora = require("ora");
+const Table = require("cli-table3");
+
+// Gradientes para estilos modernos
+const cyberpunk = gradient([
+  "#f72585",
+  "#b5179e",
+  "#7209b7",
+  "#560bad",
+  "#480ca8",
+  "#3a0ca3",
+  "#3f37c9",
+  "#4361ee",
+  "#4895ef",
+  "#4cc9f0",
+]);
+const sublime = gradient(["#ff7e5f", "#feb47b"]);
+const retro = gradient(["#43cea2", "#185a9d"]);
+const pastel = gradient(["#dad4ec", "#f3e7e9"]);
+
+// Configuración de estilos para diferentes OS
+const isWindows = process.platform === "win32";
+const boxConfig = {
+  padding: 1,
+  margin: 1,
+  borderStyle: isWindows ? "round" : "double", // Windows tiene mejor soporte para bordes simples
+  borderColor: "cyan",
+  backgroundColor: "#222",
+};
+
+// Funciones de utilidad para UI
+function renderTitle(text) {
+  try {
+    const figletText = figlet.textSync(text, {
+      font: "ANSI Shadow",
+      horizontalLayout: "fitted",
+      verticalLayout: "default",
+      width: 80,
+      whitespaceBreak: true,
+    });
+
+    return cyberpunk(figletText);
+  } catch (error) {
+    // Fallback simple en caso de error con figlet
+    return chalk.bold.cyan(`\n${text}\n`);
+  }
+}
+
+function createSpinner(text) {
+  return ora({
+    text,
+    spinner: "dots12",
+    color: "cyan",
+  });
+}
 
 // Traducciones
 const translations = {
@@ -16,6 +74,7 @@ const translations = {
       "These packages are as used as an umbrella in the desert...",
       "Dependencies found hibernating in your package.json...",
     ],
+    title: "npm-watchdog",
     description:
       "A tool to detect unused dependencies in JavaScript/TypeScript projects",
     jsonOption: "Export results in JSON format",
@@ -26,14 +85,25 @@ const translations = {
     errorPackageJson: "Error: package.json not found in %s",
     noDependencies: "No dependencies found in package.json",
     noSourceFiles: "No source files found to analyze",
-    totalDependencies: "Total dependencies: %s",
-    usedDependencies: "Used dependencies: %s",
-    unusedDependencies: "Unused dependencies: %s",
-    ignoredModules: "Ignored modules: %s",
+    totalDependencies: "Total dependencies",
+    usedDependencies: "Used dependencies",
+    unusedDependencies: "Unused dependencies",
+    ignoredModules: "Ignored modules",
     unusedDepsLabel: "Unused dependencies:",
     suggestion: "Suggestion: Consider removing these dependencies with:",
     goodJob: "Good job! No unused dependencies found.",
     error: "Error:",
+    analyzing: "Analyzing your project...",
+    scanningFiles: "Scanning source files...",
+    checkingDependencies: "Checking dependencies usage...",
+    preparing: "Preparing watchdog...",
+    scanning: "Scanning for dependencies...",
+    name: "Name",
+    version: "Version",
+    status: "Status",
+    unused: "Unused",
+    used: "Used",
+    ignored: "Ignored",
   },
   es: {
     funnyMessages: [
@@ -43,6 +113,7 @@ const translations = {
       "Estos paquetes están tan utilizados como un paraguas en el desierto...",
       "Dependencias encontradas hibernando en tu package.json...",
     ],
+    title: "npm-watchdog",
     description:
       "Una herramienta para detectar dependencias no utilizadas en proyectos JavaScript/TypeScript",
     jsonOption: "Exportar resultados en formato JSON",
@@ -53,20 +124,31 @@ const translations = {
     errorPackageJson: "Error: No se encontró package.json en %s",
     noDependencies: "No se encontraron dependencias en el package.json",
     noSourceFiles: "No se encontraron archivos fuente para analizar",
-    totalDependencies: "Total de dependencias: %s",
-    usedDependencies: "Dependencias utilizadas: %s",
-    unusedDependencies: "Dependencias no utilizadas: %s",
-    ignoredModules: "Módulos ignorados: %s",
+    totalDependencies: "Total de dependencias",
+    usedDependencies: "Dependencias utilizadas",
+    unusedDependencies: "Dependencias no utilizadas",
+    ignoredModules: "Módulos ignorados",
     unusedDepsLabel: "Dependencias no utilizadas:",
     suggestion: "Sugerencia: Considera eliminar estas dependencias con:",
     goodJob: "¡Buen trabajo! No se encontraron dependencias no utilizadas.",
     error: "Error:",
+    analyzing: "Analizando tu proyecto...",
+    scanningFiles: "Escaneando archivos fuente...",
+    checkingDependencies: "Verificando uso de dependencias...",
+    preparing: "Preparando watchdog...",
+    scanning: "Escaneando dependencias...",
+    name: "Nombre",
+    version: "Versión",
+    status: "Estado",
+    unused: "No usada",
+    used: "Usada",
+    ignored: "Ignorada",
   },
 };
 
 // Versión y descripción
 program
-  .version("1.0.0")
+  .version("1.0.2")
   .description(
     "A tool to detect unused dependencies in JavaScript/TypeScript projects"
   );
@@ -80,7 +162,8 @@ program
     (val) => val.split(",")
   )
   .option("-r, --root <path>", "Base path for monorepo projects", ".")
-  .option("-l, --lang <language>", "Language (en, es)", "en");
+  .option("-l, --lang <language>", "Language (en, es)", "en")
+  .option("-m, --minimal", "Minimal output mode (no ASCII art)", false);
 
 program.parse(process.argv);
 const options = program.opts();
@@ -97,22 +180,72 @@ function normalizePath(p) {
   return p.split(/[\/\\]/).join(path.sep);
 }
 
+// Arte ASCII para la cabecera
+function showHeader() {
+  if (options.minimal) {
+    console.log(chalk.bold.cyan(`\n${t.title} v1.0.2\n`));
+    return;
+  }
+
+  console.log("\n");
+  console.log(renderTitle(t.title));
+
+  const mensajeDivertido =
+    t.funnyMessages[Math.floor(Math.random() * t.funnyMessages.length)];
+
+  console.log(
+    boxen(pastel(mensajeDivertido), {
+      padding: 1,
+      margin: { top: 1, bottom: 1 },
+      borderStyle: "round",
+      borderColor: "cyan",
+      textAlignment: "center",
+    })
+  );
+
+  console.log(""); // Espacio adicional
+}
+
+// Función para crear tablas estilizadas
+function createTable(headers) {
+  return new Table({
+    head: headers.map((header) => chalk.cyan.bold(header)),
+    chars: isWindows
+      ? { mid: "", "left-mid": "", "mid-mid": "", "right-mid": "" }
+      : undefined,
+    style: {
+      head: [],
+      border: ["cyan"],
+    },
+  });
+}
+
 // Función principal
 async function main() {
+  // Mostrar cabecera
+  showHeader();
+
+  // Spinner inicial
+  const spinner = createSpinner(t.preparing);
+  spinner.start();
+
   const rootPath = path.resolve(options.root);
 
   // Verificar si el directorio existe
   if (!fs.existsSync(rootPath)) {
-    console.error(chalk.red(t.errorDir.replace("%s", rootPath)));
+    spinner.fail(chalk.red(t.errorDir.replace("%s", rootPath)));
     process.exit(1);
   }
 
   // Verificar si existe package.json
   const packageJsonPath = path.join(rootPath, "package.json");
   if (!fs.existsSync(packageJsonPath)) {
-    console.error(chalk.red(t.errorPackageJson.replace("%s", rootPath)));
+    spinner.fail(chalk.red(t.errorPackageJson.replace("%s", rootPath)));
     process.exit(1);
   }
+
+  // Actualizar el mensaje del spinner
+  spinner.text = t.scanning;
 
   // Leer package.json
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
@@ -122,9 +255,12 @@ async function main() {
   };
 
   if (Object.keys(dependencies).length === 0) {
-    console.log(chalk.yellow(t.noDependencies));
+    spinner.warn(chalk.yellow(t.noDependencies));
     process.exit(0);
   }
+
+  // Actualizar mensaje del spinner
+  spinner.text = t.scanningFiles;
 
   // Encontrar archivos .js, .jsx, .ts, .tsx
   // Configuración del glob para compatibilidad multiplataforma
@@ -143,9 +279,12 @@ async function main() {
   });
 
   if (sourceFiles.length === 0) {
-    console.log(chalk.yellow(t.noSourceFiles));
+    spinner.warn(chalk.yellow(t.noSourceFiles));
     process.exit(0);
   }
+
+  // Actualizar mensaje del spinner
+  spinner.text = t.checkingDependencies;
 
   // Analizar cada archivo para buscar importaciones
   const usedDependencies = new Set();
@@ -189,6 +328,9 @@ async function main() {
     return !usedDependencies.has(dep);
   });
 
+  // Detener el spinner
+  spinner.succeed(chalk.green(t.analyzing));
+
   // Mostrar los resultados
   if (options.json) {
     // Formato JSON
@@ -200,42 +342,77 @@ async function main() {
     };
     console.log(JSON.stringify(jsonResult, null, 2));
   } else {
-    // Formato legible
-    const mensajeDivertido =
-      t.funnyMessages[Math.floor(Math.random() * t.funnyMessages.length)];
-
-    console.log(chalk.bold("\n🐶 npm-watchdog"));
-    console.log(chalk.italic(mensajeDivertido + "\n"));
-
-    console.log(
-      chalk.bold(
-        t.totalDependencies.replace("%s", Object.keys(dependencies).length)
-      )
+    // Resumen estilizado
+    const statsBox = boxen(
+      `${chalk.cyan.bold(t.totalDependencies)}: ${chalk.white(
+        Object.keys(dependencies).length
+      )}\n` +
+        `${chalk.green.bold(t.usedDependencies)}: ${chalk.white(
+          usedDependencies.size
+        )}\n` +
+        `${chalk.red.bold(t.unusedDependencies)}: ${chalk.white(
+          unusedDependencies.length
+        )}` +
+        (ignoredModules.length > 0
+          ? `\n${chalk.yellow.bold(t.ignoredModules)}: ${chalk.white(
+              ignoredModules.length
+            )}`
+          : ""),
+      {
+        padding: 1,
+        margin: 1,
+        borderStyle: isWindows ? "round" : "double",
+        borderColor: "blue",
+        textAlignment: "left",
+      }
     );
-    console.log(
-      chalk.bold(t.usedDependencies.replace("%s", usedDependencies.size))
-    );
-    console.log(
-      chalk.bold(t.unusedDependencies.replace("%s", unusedDependencies.length))
-    );
 
+    console.log(statsBox);
+
+    // Si hay módulos ignorados, mostrarlos
     if (ignoredModules.length > 0) {
-      console.log(
-        chalk.yellow(
-          `\n${t.ignoredModules.replace("%s", ignoredModules.join(", "))}`
-        )
-      );
+      console.log(chalk.yellow.bold(`\n${t.ignoredModules}:`));
+      console.log(chalk.yellow(ignoredModules.join(", ")));
     }
 
+    // Tabla detallada de dependencias
     if (unusedDependencies.length > 0) {
-      console.log(chalk.red(`\n${t.unusedDepsLabel}`));
+      console.log(chalk.red.bold(`\n${t.unusedDepsLabel}`));
+
+      const table = createTable([t.name, t.version, t.status]);
+
+      // Añadir las dependencias no utilizadas
       unusedDependencies.forEach((dep) => {
-        console.log(chalk.red(`  - ${dep} (${dependencies[dep]})`));
+        table.push([
+          chalk.red(dep),
+          chalk.gray(dependencies[dep]),
+          chalk.red(t.unused),
+        ]);
       });
-      console.log(chalk.cyan(`\n${t.suggestion}`));
-      console.log(chalk.cyan(`npm uninstall ${unusedDependencies.join(" ")}`));
+
+      console.log(table.toString());
+
+      // Sugerencia de comando para desinstalar
+      const uninstallCmd = `npm uninstall ${unusedDependencies.join(" ")}`;
+      console.log(
+        boxen(`${sublime(t.suggestion)}\n\n${chalk.cyan(uninstallCmd)}`, {
+          padding: 1,
+          margin: { top: 1, bottom: 1 },
+          borderStyle: "round",
+          borderColor: "yellow",
+        })
+      );
     } else {
-      console.log(chalk.green(`\n${t.goodJob}`));
+      // Mensaje de éxito
+      console.log(
+        boxen(retro(t.goodJob), {
+          padding: 1,
+          margin: { top: 1, bottom: 1 },
+          borderStyle: "round",
+          borderColor: "green",
+          textAlignment: "center",
+        })
+      );
     }
   }
 }
@@ -255,6 +432,13 @@ function getPackageNameFromImport(importPath) {
 
 // Ejecutar la función principal
 main().catch((error) => {
-  console.error(chalk.red(`${t.error}`), error);
+  console.error(
+    boxen(`${chalk.red.bold(`${t.error}`)}\n\n${chalk.white(error.message)}`, {
+      padding: 1,
+      margin: 1,
+      borderStyle: "round",
+      borderColor: "red",
+    })
+  );
   process.exit(1);
 });
